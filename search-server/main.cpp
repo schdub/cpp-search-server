@@ -8,10 +8,12 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <numeric>
 
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double EPSILLON = 1e-6;
 
 string ReadLine() {
     string s;
@@ -80,14 +82,14 @@ public:
             });
     }
 
-    template <typename Pred>
-    vector<Document> FindTopDocuments(const string& raw_query, Pred pred) const {
+    template <typename Predicate>
+    vector<Document> FindTopDocuments(const string& raw_query, Predicate predicate) const {
         const Query query = ParseQuery(raw_query);
-        auto matched_documents = FindAllDocuments(query, pred);
+        auto matched_documents = FindAllDocuments(query, predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                if (abs(lhs.relevance - rhs.relevance) < EPSILLON) {
                     return lhs.rating > rhs.rating;
                 } else {
                     return lhs.relevance > rhs.relevance;
@@ -100,40 +102,14 @@ public:
     }
 
     vector<Document> FindTopDocuments(const string& raw_query) const {
-        auto pred = [](int document_id, DocumentStatus status, int rating) {
-            return status == DocumentStatus::ACTUAL;
-        };
-        return FindTopDocuments(raw_query, pred);
+        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
     }
 
     vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
-        switch(status) {
-            case DocumentStatus::ACTUAL: {
-                auto pred = [](int document_id, DocumentStatus status, int rating) {
-                    return status == DocumentStatus::ACTUAL;
-                };
-                return FindTopDocuments(raw_query, pred);
-            }
-            case DocumentStatus::IRRELEVANT: {
-                auto pred = [](int document_id, DocumentStatus status, int rating) {
-                    return status == DocumentStatus::IRRELEVANT;
-                };
-                return FindTopDocuments(raw_query, pred);
-            }
-            case DocumentStatus::BANNED: {
-                auto pred = [](int document_id, DocumentStatus status, int rating) {
-                    return status == DocumentStatus::BANNED;
-                };
-                return FindTopDocuments(raw_query, pred);
-            }
-            case DocumentStatus::REMOVED: {
-                auto pred = [](int document_id, DocumentStatus status, int rating) {
-                    return status == DocumentStatus::REMOVED;
-                };
-                return FindTopDocuments(raw_query, pred);
-            }
-        }
-        return vector<Document>();
+        auto pred = [status](int document_id, DocumentStatus predicate_status, int rating) {
+            return predicate_status == status;
+        };
+        return FindTopDocuments(raw_query, pred);
     }
 
     int GetDocumentCount() const {
@@ -191,10 +167,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
+        int rating_sum = std::accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -243,8 +216,8 @@ private:
         return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
     }
 
-    template<typename Pred>
-    vector<Document> FindAllDocuments(const Query& query, Pred pred) const {
+    template<typename Predicate>
+    vector<Document> FindAllDocuments(const Query& query, Predicate predicate) const {
         map<int, double> document_to_relevance;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -252,7 +225,8 @@ private:
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
             for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
-                if ( pred(document_id, documents_.at(document_id).status, documents_.at(document_id).rating) ) {
+                const DocumentData & doc_data = documents_.at(document_id);
+                if ( predicate(document_id, doc_data.status, doc_data.rating) ) {
                     document_to_relevance[document_id] += term_freq * inverse_document_freq;
                 }
             }
