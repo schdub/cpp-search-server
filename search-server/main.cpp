@@ -365,7 +365,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
         SearchServer server;
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
@@ -391,35 +391,35 @@ void TestAdditionOfDocuments() {
     server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
     {
         const auto found_docs = server.FindTopDocuments("nothig"s);
-        ASSERT_EQUAL_HINT(found_docs.size(), 0, "Найдено несуществующее слово.");
+        ASSERT_EQUAL_HINT(found_docs.size(), 0u, "Найдено несуществующее слово.");
     }
     {
         const auto found_docs = server.FindTopDocuments("in"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
     {
         const auto found_docs = server.FindTopDocuments("cat"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
     {
         const auto found_docs = server.FindTopDocuments("the"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
     {
         const auto found_docs = server.FindTopDocuments("city"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
     {
         const auto found_docs = server.FindTopDocuments("          cat from city         "s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
     }
@@ -452,13 +452,13 @@ void TestExcludeMinusWords() {
     }
     {
         const auto found_docs = server.FindTopDocuments("dog city"s);
-        ASSERT_EQUAL(found_docs.size(), 2);
+        ASSERT_EQUAL(found_docs.size(), 2u);
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_ids[dog_index]);
     }
     {
         const auto found_docs = server.FindTopDocuments("-cat city"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[dog_index]);
     }
 }
@@ -494,7 +494,7 @@ void TestMatchingDocuments() {
     {
         const string query = "dog city"s;
         const auto & [words, status] = server.MatchDocument(query, doc_ids[dog_index]);
-        ASSERT_EQUAL(words.size(), 2);
+        ASSERT_EQUAL(words.size(), 2u);
         ASSERT_EQUAL(status, statuses[dog_index]);
         ASSERT(query.find(words[0]) != string::npos);
         ASSERT(query.find(words[1]) != string::npos);
@@ -502,7 +502,7 @@ void TestMatchingDocuments() {
     {
         const string query = "cat city"s;
         const auto & [words, status] = server.MatchDocument(query, doc_ids[dog_index]);
-        ASSERT_EQUAL(words.size(), 1);
+        ASSERT_EQUAL(words.size(), 1u);
         ASSERT_EQUAL(status, statuses[dog_index]);
         ASSERT(words[0] == "city"s);
     }
@@ -514,14 +514,14 @@ void TestMatchingDocuments() {
     {
         const string query = "-cat city"s;
         const auto & [words, status] = server.MatchDocument(query, doc_ids[dog_index]);
-        ASSERT_EQUAL(words.size(), 1);
+        ASSERT_EQUAL(words.size(), 1u);
         ASSERT_EQUAL(status, statuses[dog_index]);
         ASSERT(query.find(words[0]) != string::npos);
     }
     {
         const string query = "cat city"s;
         const auto & [words, status] = server.MatchDocument(query, doc_ids[cat_index]);
-        ASSERT_EQUAL(words.size(), 2);
+        ASSERT_EQUAL(words.size(), 2u);
         ASSERT_EQUAL(status, statuses[cat_index]);
         ASSERT(query.find(words[0]) != string::npos);
         ASSERT(query.find(words[1]) != string::npos);
@@ -562,7 +562,7 @@ void TestSortDocumentsByRelevancy() {
     }
     {
         const auto found_docs = server.FindTopDocuments("in city"s);
-        ASSERT_EQUAL(found_docs.size(), 4);
+        ASSERT_EQUAL(found_docs.size(), 4u);
         ASSERT(found_docs[0].relevance >= found_docs[1].relevance);
         ASSERT(found_docs[1].relevance >= found_docs[2].relevance);
         ASSERT(found_docs[2].relevance >= found_docs[3].relevance);
@@ -597,7 +597,7 @@ void TestCalculationOfRating() {
     }
     {
         const auto found_docs = server.FindTopDocuments("in city"s);
-        ASSERT_EQUAL(found_docs.size(), 2);
+        ASSERT_EQUAL(found_docs.size(), 2u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[dog_index]);
         {
             const auto & v = ratings[dog_index];
@@ -645,14 +645,14 @@ void TestUsageDocumentsPredicate() {
     }
     {
         const auto found_docs = server.FindTopDocuments("dog"s);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[dog_index]);
     }
     {
         const auto found_docs = server.FindTopDocuments("dog"s, [](int, DocumentStatus status, int) {
             return status == DocumentStatus::BANNED;
         });
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[dog_banned_index]);
     }
 }
@@ -694,22 +694,22 @@ void TestFindByStatus() {
     }
     {
         const auto found_docs = server.FindTopDocuments("dog"s, DocumentStatus::ACTUAL);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[dog_index]);
     }
     {
         const auto found_docs = server.FindTopDocuments("dog"s, DocumentStatus::BANNED);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[dog_banned_index]);
     }
     {
         const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::ACTUAL);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[cat_index]);
     }
     {
         const auto found_docs = server.FindTopDocuments("cat"s, DocumentStatus::IRRELEVANT);
-        ASSERT_EQUAL(found_docs.size(), 1);
+        ASSERT_EQUAL(found_docs.size(), 1u);
         ASSERT_EQUAL(found_docs[0].id, doc_ids[cat_irrelevant_index]);
     }
 }
@@ -753,7 +753,7 @@ void TestCalculationDocumentsRelevancy() {
     {
         const string query = "dog not"s;
         const auto found_docs = server.FindTopDocuments(query);
-        ASSERT_EQUAL(found_docs.size(), 4);
+        ASSERT_EQUAL(found_docs.size(), 4u);
         ASSERT_EQUAL(found_docs[3].relevance, relevances[dog_3_index]);
         ASSERT_EQUAL(found_docs[2].relevance, relevances[dog_2_index]);
         ASSERT_EQUAL(found_docs[1].relevance, relevances[dog_1_index]);
