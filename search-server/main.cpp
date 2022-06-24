@@ -179,10 +179,6 @@ public:
         return {matched_words, documents_.at(document_id).status};
     }
 
-    void test() {
-        //try { ParseQuery("пушистый --кот"); } catch (exception & e) { cout << e.what() << endl; }
-    }
-
 private:
     struct DocumentData {
         int rating;
@@ -364,8 +360,6 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
 
 int main() {
     SearchServer search_server("и в на"s);
-
-    search_server.test();
 
     AddDocument(search_server, 1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, {7, 2, 7});
     AddDocument(search_server, 1, "пушистый пёс и модный ошейник"s, DocumentStatus::ACTUAL, {1, 2});
