@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 #include <numeric>
-#include <sstream>
 
 using namespace std;
 
@@ -90,11 +89,7 @@ public:
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
             if (HasSpecialSymbols(word)) {
-                stringstream ss;
-                ss << "SetStopWords: Invalid stop word='";
-                ss << word;
-                ss << "'";
-                throw invalid_argument(ss.str());
+                throw invalid_argument("SetStopWords: Invalid stop word='" + word + "'");
             }
             stop_words_.insert(word);
         }
@@ -105,17 +100,7 @@ public:
             throw invalid_argument("AddDocument: document_id < 0");
         }
         if (documents_.count(document_id) > 0) {
-            stringstream ss;
-            ss << "AddDocument: document_id=";
-            ss << document_id;
-            ss << " already exist";
-            throw invalid_argument(ss.str());
-        }
-        if (HasSpecialSymbols(document)) {
-            stringstream ss;
-            ss << "AddDocument: special symbols in content of document_id=";
-            ss << document_id;
-            throw invalid_argument(ss.str());
+            throw invalid_argument("AddDocument: document_id=" + to_string(document_id) + " already exist");
         }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
@@ -207,9 +192,14 @@ private:
     }
 
     vector<string> SplitIntoWordsNoStop(const string& text) const {
+
+
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
-            if (!word.empty() && !IsStopWord(word)) {
+            if (HasSpecialSymbols(word)) {
+                throw invalid_argument("SplitIntoWordsNoStop: invalid symbols='" + text + "'");
+            }
+            if (IsStopWord(word)) {
                 words.push_back(word);
             }
         }
@@ -230,14 +220,18 @@ private:
         bool is_stop;
     };
 
-    void ParseQueryWord(string text, QueryWord & result) const {
-        result.is_minus = false;
-        result.is_stop = false;
-
+    QueryWord ParseQueryWord(string text) const {
         if (text.empty()) {
             throw invalid_argument("ParseQueryWord: empty word");
         }
 
+        if (HasSpecialSymbols(text)) {
+            throw invalid_argument("ParseQueryWord: invalid symbols '" + text + "'");
+        }
+
+        QueryWord result;
+        result.is_minus = false;
+        result.is_stop = false;
         if (text[0] == '-') {
             result.is_minus = true;
             if (text.size() == 1) {
@@ -250,9 +244,9 @@ private:
                 }
             }
         }
-
         result.data = text;
         result.is_stop = IsStopWord(text);
+        return result;
     }
 
     struct Query {
@@ -261,17 +255,9 @@ private:
     };
 
     Query ParseQuery(const string& text) const {
-        if (HasSpecialSymbols(text)) {
-            stringstream ss;
-            ss << "ParseQuery: invalid symbols in query '";
-            ss << text;
-            ss << "'.";
-            throw invalid_argument(ss.str());
-        }
         Query query;
         for (const string& word : SplitIntoWords(text)) {
-            QueryWord query_word;
-            ParseQueryWord(word, query_word);
+            const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
                     query.minus_words.insert(query_word.data);
