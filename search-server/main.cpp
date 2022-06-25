@@ -8,12 +8,9 @@
 #include <utility>
 #include <vector>
 #include <numeric>
+#include <sstream>
 
 using namespace std;
-
-// ////////////////////////////////////////////////////////////////////////////////////////// //
-/* Подставьте вашу реализацию класса SearchServer сюда */
-// ////////////////////////////////////////////////////////////////////////////////////////// //
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double EPSILLON = 1e-6;
@@ -92,19 +89,34 @@ public:
 
     void SetStopWords(const string& text) {
         for (const string& word : SplitIntoWords(text)) {
-            if (HasSpecialSymbols(word))
-                throw invalid_argument("SetStopWords: Invalid stop word");
+            if (HasSpecialSymbols(word)) {
+                stringstream ss;
+                ss << "SetStopWords: Invalid stop word='";
+                ss << word;
+                ss << "'";
+                throw invalid_argument(ss.str());
+            }
             stop_words_.insert(word);
         }
     }
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
-        if (document_id < 0)
+        if (document_id < 0) {
             throw invalid_argument("AddDocument: document_id < 0");
-        if (documents_.count(document_id) > 0)
-            throw invalid_argument("AddDocument: document_id already exist");
-        if (HasSpecialSymbols(document))
-            throw invalid_argument("AddDocument: special symbols in content of document");
+        }
+        if (documents_.count(document_id) > 0) {
+            stringstream ss;
+            ss << "AddDocument: document_id=";
+            ss << document_id;
+            ss << " already exist";
+            throw invalid_argument(ss.str());
+        }
+        if (HasSpecialSymbols(document)) {
+            stringstream ss;
+            ss << "AddDocument: special symbols in content of document_id=";
+            ss << document_id;
+            throw invalid_argument(ss.str());
+        }
         const vector<string> words = SplitIntoWordsNoStop(document);
         const double inv_word_count = 1.0 / words.size();
         for (const string& word : words) {
@@ -115,7 +127,7 @@ public:
                 ComputeAverageRating(ratings),
                 status
             });
-        documents_by_index_.push_back(document_id);
+        documents_id_by_index_.push_back(document_id);
     }
 
     template <typename Predicate>
@@ -153,7 +165,7 @@ public:
     }
 
     int GetDocumentId(size_t index) const {
-        return documents_by_index_.at(index);
+        return documents_id_by_index_.at(index);
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -188,7 +200,7 @@ private:
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> documents_;
-    vector<int> documents_by_index_;
+    vector<int> documents_id_by_index_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
@@ -197,7 +209,7 @@ private:
     vector<string> SplitIntoWordsNoStop(const string& text) const {
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
-            if (!IsStopWord(word)) {
+            if (!word.empty() && !IsStopWord(word)) {
                 words.push_back(word);
             }
         }
@@ -218,11 +230,16 @@ private:
         bool is_stop;
     };
 
-    QueryWord ParseQueryWord(string text) const {
-        bool is_minus = false;
-        // Word shouldn't be empty
+    void ParseQueryWord(string text, QueryWord & result) const {
+        result.is_minus = false;
+        result.is_stop = false;
+
+        if (text.empty()) {
+            throw invalid_argument("ParseQueryWord: empty word");
+        }
+
         if (text[0] == '-') {
-            is_minus = true;
+            result.is_minus = true;
             if (text.size() == 1) {
                 throw invalid_argument("ParseQueryWord: empty minus word");
             } else {
@@ -233,11 +250,9 @@ private:
                 }
             }
         }
-        return {
-            text,
-            is_minus,
-            IsStopWord(text)
-        };
+
+        result.data = text;
+        result.is_stop = IsStopWord(text);
     }
 
     struct Query {
@@ -246,11 +261,17 @@ private:
     };
 
     Query ParseQuery(const string& text) const {
-        if (HasSpecialSymbols(text))
-            throw invalid_argument("ParseQuery: invalid symbols in query");
+        if (HasSpecialSymbols(text)) {
+            stringstream ss;
+            ss << "ParseQuery: invalid symbols in query '";
+            ss << text;
+            ss << "'.";
+            throw invalid_argument(ss.str());
+        }
         Query query;
         for (const string& word : SplitIntoWords(text)) {
-            const QueryWord query_word = ParseQueryWord(word);
+            QueryWord query_word;
+            ParseQueryWord(word, query_word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
                     query.minus_words.insert(query_word.data);
