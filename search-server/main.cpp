@@ -192,14 +192,12 @@ private:
     }
 
     vector<string> SplitIntoWordsNoStop(const string& text) const {
-
-
         vector<string> words;
         for (const string& word : SplitIntoWords(text)) {
             if (HasSpecialSymbols(word)) {
                 throw invalid_argument("SplitIntoWordsNoStop: invalid symbols='" + text + "'");
             }
-            if (IsStopWord(word)) {
+            if (!IsStopWord(word)) {
                 words.push_back(word);
             }
         }
