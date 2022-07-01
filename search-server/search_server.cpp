@@ -39,6 +39,54 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
     documents_id_by_index_.push_back(document_id);
 }
 
+void SearchServer::RemoveDocument(int document_id) {
+    // erase document
+    documents_.erase(document_id);
+    // word_to_document_freqs_[word][document_id] += inv_word_count;
+    // build documents words from freq map
+    std::vector<string> words;
+    for (auto & [word, freq_map] : word_to_document_freqs_) {
+        auto freq_iter = freq_map.find(document_id);
+        if (freq_iter == freq_map.end()) continue;
+        words.push_back(word);
+    }
+    // erase each mention of document_id in freqs map
+    for (auto & word : words) {
+        auto & map = word_to_document_freqs_[word];
+        map.erase(document_id);
+    }
+    // remove index mention
+    documents_id_by_index_.erase(
+        remove_if(documents_id_by_index_.begin(),
+              documents_id_by_index_.end(),
+              [document_id](int value) { return value == document_id; }
+        )
+    );
+}
+
+const map<string, double>& SearchServer::GetWordFrequencies(int document_id) const {
+    static map<string, double> empty_map;
+    std::vector<string> words;
+    for (auto & [word, freq_map] : word_to_document_freqs_) {
+        auto freq_iter = freq_map.find(document_id);
+        if (freq_iter == freq_map.end()) continue;
+        words.push_back(word);
+    }
+    if (words.size() == 0) {
+        return empty_map;
+    }
+    static map<string, double> out_map;
+    out_map.clear();
+    for (auto& word : words) {
+        const auto & map = word_to_document_freqs_.at(word);
+        const auto freq_iter = map.find(document_id);
+        if (freq_iter != map.end()) {
+            out_map[ word ] = freq_iter->second;
+        }
+    }
+    return out_map;
+}
+
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {
     auto pred = [status](int, DocumentStatus predicate_status, int) {
         return predicate_status == status;
@@ -150,3 +198,13 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
 double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
     return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
 }
+
+std::vector<int>::const_iterator SearchServer::begin() const {
+    return documents_id_by_index_.begin();
+}
+
+std::vector<int>::const_iterator SearchServer::end() const {
+    return documents_id_by_index_.end();
+}
+
+

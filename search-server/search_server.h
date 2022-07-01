@@ -22,6 +22,10 @@ public:
     void SetStopWords(const std::string& text);
 
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+    void RemoveDocument(int document_id);
+
+    const std::map<std::string, double>&
+    GetWordFrequencies(int document_id) const;
 
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const;
 
@@ -34,6 +38,9 @@ public:
 
     std::tuple<std::vector<std::string>, DocumentStatus>
     MatchDocument(const std::string& raw_query, int document_id) const;
+
+    std::vector<int>::const_iterator begin() const;
+    std::vector<int>::const_iterator end() const;
 
 private:
     struct DocumentData {
