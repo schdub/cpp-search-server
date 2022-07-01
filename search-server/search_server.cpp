@@ -36,7 +36,7 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
             ComputeAverageRating(ratings),
             status
         });
-    documents_id_by_index_.push_back(document_id);
+    documents_indexes_.insert(document_id);
 }
 
 void SearchServer::RemoveDocument(int document_id) {
@@ -56,12 +56,7 @@ void SearchServer::RemoveDocument(int document_id) {
         map.erase(document_id);
     }
     // remove index mention
-    documents_id_by_index_.erase(
-        remove_if(documents_id_by_index_.begin(),
-              documents_id_by_index_.end(),
-              [document_id](int value) { return value == document_id; }
-        )
-    );
+    documents_indexes_.erase(document_id);
 }
 
 const map<string, double>& SearchServer::GetWordFrequencies(int document_id) const {
@@ -96,10 +91,6 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 
 int SearchServer::GetDocumentCount() const {
     return documents_.size();
-}
-
-int SearchServer::GetDocumentId(size_t index) const {
-    return documents_id_by_index_.at(index);
 }
 
 tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& raw_query, int document_id) const {
@@ -199,12 +190,12 @@ double SearchServer::ComputeWordInverseDocumentFreq(const string& word) const {
     return log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
 }
 
-std::vector<int>::const_iterator SearchServer::begin() const {
-    return documents_id_by_index_.begin();
+std::set<int>::const_iterator SearchServer::begin() const {
+    return documents_indexes_.begin();
 }
 
-std::vector<int>::const_iterator SearchServer::end() const {
-    return documents_id_by_index_.end();
+std::set<int>::const_iterator SearchServer::end() const {
+    return documents_indexes_.end();
 }
 
 

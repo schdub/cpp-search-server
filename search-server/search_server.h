@@ -11,6 +11,8 @@
 #include <set>
 #include <map>
 
+const int MAX_RESULT_DOCUMENT_COUNT = 5;
+
 class SearchServer {
 public:
     SearchServer() = default;
@@ -34,13 +36,11 @@ public:
 
     int GetDocumentCount() const;
 
-    int GetDocumentId(size_t index) const;
-
     std::tuple<std::vector<std::string>, DocumentStatus>
     MatchDocument(const std::string& raw_query, int document_id) const;
 
-    std::vector<int>::const_iterator begin() const;
-    std::vector<int>::const_iterator end() const;
+    std::set<int>::const_iterator begin() const;
+    std::set<int>::const_iterator end() const;
 
 private:
     struct DocumentData {
@@ -51,8 +51,7 @@ private:
     std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::map<int, DocumentData> documents_;
-    std::vector<int> documents_id_by_index_;
-    const int MAX_RESULT_DOCUMENT_COUNT = 5;
+    std::set<int> documents_indexes_;
 
     bool IsStopWord(const std::string& word) const;
 
