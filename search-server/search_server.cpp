@@ -28,8 +28,10 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
     }
     const vector<string> words = SplitIntoWordsNoStop(document);
     const double inv_word_count = 1.0 / words.size();
+    auto & map_of_words_freq = document_to_word_freqs_[document_id];
     for (const string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
+        map_of_words_freq[word] += inv_word_count;
     }
     documents_.emplace(document_id,
         DocumentData{
@@ -43,43 +45,21 @@ void SearchServer::RemoveDocument(int document_id) {
     // erase document
     documents_.erase(document_id);
     // word_to_document_freqs_[word][document_id] += inv_word_count;
-    // build documents words from freq map
-    std::vector<string> words;
-    for (auto & [word, freq_map] : word_to_document_freqs_) {
-        auto freq_iter = freq_map.find(document_id);
-        if (freq_iter == freq_map.end()) continue;
-        words.push_back(word);
+    for (auto & [word, _] : document_to_word_freqs_[document_id]) {
+        word_to_document_freqs_[word].erase(document_id);
     }
-    // erase each mention of document_id in freqs map
-    for (auto & word : words) {
-        auto & map = word_to_document_freqs_[word];
-        map.erase(document_id);
-    }
+    document_to_word_freqs_.erase(document_id);
     // remove index mention
     documents_indexes_.erase(document_id);
 }
 
 const map<string, double>& SearchServer::GetWordFrequencies(int document_id) const {
-    static map<string, double> empty_map;
-    std::vector<string> words;
-    for (auto & [word, freq_map] : word_to_document_freqs_) {
-        auto freq_iter = freq_map.find(document_id);
-        if (freq_iter == freq_map.end()) continue;
-        words.push_back(word);
-    }
-    if (words.size() == 0) {
+    const auto & doc_2_word_freqs_iter = document_to_word_freqs_.find(document_id);
+    if (doc_2_word_freqs_iter == document_to_word_freqs_.end()) {
+        static map<string, double> empty_map;
         return empty_map;
     }
-    static map<string, double> out_map;
-    out_map.clear();
-    for (auto& word : words) {
-        const auto & map = word_to_document_freqs_.at(word);
-        const auto freq_iter = map.find(document_id);
-        if (freq_iter != map.end()) {
-            out_map[ word ] = freq_iter->second;
-        }
-    }
-    return out_map;
+    return doc_2_word_freqs_iter->second;
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, DocumentStatus status) const {

@@ -12,6 +12,7 @@
 #include <map>
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double RELEVANCE_CMP_EPSILON = 1.0e-6;
 
 class SearchServer {
 public:
@@ -50,6 +51,7 @@ private:
 
     std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
+    std::map<int, std::map<std::string, double>> document_to_word_freqs_;
     std::map<int, DocumentData> documents_;
     std::set<int> documents_indexes_;
 
@@ -95,7 +97,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 
     sort(matched_documents.begin(), matched_documents.end(),
          [](const Document& lhs, const Document& rhs) {
-            if (std::abs(lhs.relevance - rhs.relevance) < 1.0e-6 *
+            if (std::abs(lhs.relevance - rhs.relevance) < RELEVANCE_CMP_EPSILON *
                 std::max(std::abs(lhs.relevance), std::abs(rhs.relevance))) {
                 return lhs.rating > rhs.rating;
             } else {
