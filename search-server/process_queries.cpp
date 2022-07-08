@@ -19,3 +19,15 @@ std::vector<std::vector<Document>> ProcessQueries(
 
     return out;
 }
+
+std::list<Document> ProcessQueriesJoined(
+    const SearchServer& search_server,
+    const std::vector<std::string>& queries) {
+    std::list<Document> out;
+    for (auto & vec : ProcessQueries(search_server, queries)) {
+        std::copy( std::make_move_iterator(vec.begin()),
+            std::make_move_iterator(vec.end()),
+            std::back_inserter(out));
+    }
+    return out;
+}
