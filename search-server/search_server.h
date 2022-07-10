@@ -11,6 +11,7 @@
 #include <set>
 #include <map>
 #include <execution>
+#include <typeinfo>
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double RELEVANCE_CMP_EPSILON = 1.0e-6;
@@ -45,6 +46,10 @@ public:
     std::tuple<std::vector<std::string>, DocumentStatus>
     MatchDocument(const std::string& raw_query, int document_id) const;
 
+    template <typename ExecutionPolicy>
+    std::tuple<std::vector<std::string>, DocumentStatus>
+    MatchDocument(ExecutionPolicy && policy, const std::string& raw_query, int document_id) const;
+
     std::set<int>::const_iterator begin() const;
     std::set<int>::const_iterator end() const;
 
@@ -59,6 +64,7 @@ private:
     std::map<int, std::map<std::string, double>> document_to_word_freqs_;
     std::map<int, DocumentData> documents_;
     std::set<int> documents_indexes_;
+    mutable std::map<std::string, Query> query_cache_;
 
     bool IsStopWord(const std::string& word) const;
 
@@ -80,6 +86,8 @@ private:
     };
 
     Query ParseQuery(const std::string& text) const;
+
+    Query ParseQueryWithCache(const std::string& text) const;
 
     // Existence required
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
@@ -172,4 +180,61 @@ void SearchServer::RemoveDocument(ExecutionPolicy && policy, int document_id) {
     document_to_word_freqs_.erase(document_id);
     documents_indexes_.erase(document_id);
     documents_.erase(document_id);
+}
+
+template <typename ExecutionPolicy>
+std::tuple<std::vector<std::string>, DocumentStatus>
+SearchServer::MatchDocument(ExecutionPolicy && policy, const std::string & raw_query, int document_id) const {
+    auto it_to_documents_data = documents_.find(document_id);
+    if (it_to_documents_data == documents_.end()) {
+        throw std::out_of_range("MatchDocument: document_id "
+            + std::to_string(document_id) + " not found.");
+    }
+
+    Query query;
+    if (typeid(policy) == typeid(std::execution::parallel_policy)) {
+        query = ParseQueryWithCache(raw_query);
+    } else {
+        query = ParseQuery(raw_query);
+    }
+
+#if 0
+    if (std::any_of(policy, query.minus_words_v.begin(), query.minus_words_v.end(),
+        [this, document_id](const std::string & minus_word) {
+            const auto it_to_set = word_to_document_freqs_.find(minus_word);
+            return (it_to_set != word_to_document_freqs_.end() &&
+                    it_to_set->second.count(document_id)); })) {
+        return { {}, it_to_documents_data->second.status };
+    }
+#else
+    for (const std::string & minus_word : query.minus_words) {
+        auto it_to_set = word_to_document_freqs_.find(minus_word);
+        if (it_to_set == word_to_document_freqs_.end() || 
+            it_to_set->second.count(document_id)) {
+            return { {}, it_to_documents_data->second.status };
+        }
+    }
+#endif
+    std::vector<std::string> matched_words;
+    matched_words.reserve(query.plus_words.size());
+#if 0
+    std::for_each(policy, query.plus_words_v.begin(), query.plus_words_v.end(),
+        [this, document_id, &matched_words](const std::string & plus_word) {
+            const auto it_to_set = word_to_document_freqs_.find(plus_word);
+            if (it_to_set != word_to_document_freqs_.end() &&
+                it_to_set->second.count(document_id)) {
+                matched_words.push_back(plus_word);
+            }
+        }
+    );
+#else
+    for (const std::string & plus_word : query.plus_words) {
+        auto it_to_set = word_to_document_freqs_.find(plus_word);
+        if (it_to_set != word_to_document_freqs_.end() &&
+            it_to_set->second.count(document_id)) {
+            matched_words.push_back(plus_word);
+        }
+    }
+#endif
+    return { matched_words, it_to_documents_data->second.status };
 }

@@ -65,27 +65,9 @@ int SearchServer::GetDocumentCount() const {
     return documents_.size();
 }
 
-tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& raw_query, int document_id) const {
-    const Query query = ParseQuery(raw_query);
-    vector<string> matched_words;
-    for (const string& word : query.plus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.push_back(word);
-        }
-    }
-    for (const string& word : query.minus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        if (word_to_document_freqs_.at(word).count(document_id)) {
-            matched_words.clear();
-            break;
-        }
-    }
-    return {matched_words, documents_.at(document_id).status};
+tuple<vector<string>, DocumentStatus>
+SearchServer::MatchDocument(const string& raw_query, int document_id) const {
+    return MatchDocument(std::execution::seq, raw_query, document_id);
 }
 
 bool SearchServer::IsStopWord(const string& word) const {
@@ -154,6 +136,16 @@ SearchServer::Query SearchServer::ParseQuery(const string& text) const {
             }
         }
     }
+    return query;
+}
+
+SearchServer::Query SearchServer::ParseQueryWithCache(const string& text) const {
+    auto it_to_query_cache = query_cache_.find(text);
+    if (it_to_query_cache != query_cache_.end()) {
+        return it_to_query_cache->second;
+    }
+    Query query = ParseQuery(text);
+    query_cache_[text] = query;
     return query;
 }
 
