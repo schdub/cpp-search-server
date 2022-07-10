@@ -10,6 +10,7 @@
 #include <tuple>
 #include <set>
 #include <map>
+#include <execution>
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double RELEVANCE_CMP_EPSILON = 1.0e-6;
@@ -25,7 +26,11 @@ public:
     void SetStopWords(const std::string& text);
 
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+
     void RemoveDocument(int document_id);
+
+    template <typename ExecutionPolicy>
+    void RemoveDocument(ExecutionPolicy && policy, int document_id);
 
     const std::map<std::string, double>&
     GetWordFrequencies(int document_id) const;
@@ -144,4 +149,27 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, Predica
         });
     }
     return matched_documents;
+}
+
+template <typename ExecutionPolicy>
+void SearchServer::RemoveDocument(ExecutionPolicy && policy, int document_id) {
+    auto iterator = document_to_word_freqs_.find(document_id);
+    if (iterator == document_to_word_freqs_.end()) {
+        return;
+    }
+    const auto & m = iterator->second;
+    std::vector<std::string> to_delete;
+    to_delete.reserve(m.size());
+    for (const auto & [word, _] : m) {
+        to_delete.emplace_back(word);
+    }
+    std::for_each(policy,
+        to_delete.begin(), to_delete.end(),
+        [document_id, this](const std::string & word) {
+            word_to_document_freqs_[word].erase(document_id);
+        }
+    );
+    document_to_word_freqs_.erase(document_id);
+    documents_indexes_.erase(document_id);
+    documents_.erase(document_id);
 }

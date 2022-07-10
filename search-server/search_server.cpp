@@ -42,15 +42,7 @@ void SearchServer::AddDocument(int document_id, const string& document, Document
 }
 
 void SearchServer::RemoveDocument(int document_id) {
-    // erase document
-    documents_.erase(document_id);
-    // word_to_document_freqs_[word][document_id] += inv_word_count;
-    for (auto & [word, _] : document_to_word_freqs_[document_id]) {
-        word_to_document_freqs_[word].erase(document_id);
-    }
-    document_to_word_freqs_.erase(document_id);
-    // remove index mention
-    documents_indexes_.erase(document_id);
+    RemoveDocument(std::execution::seq, document_id);
 }
 
 const map<string, double>& SearchServer::GetWordFrequencies(int document_id) const {
