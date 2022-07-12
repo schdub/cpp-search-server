@@ -8,9 +8,9 @@
 #include <iostream>
 
 void RemoveDuplicates(SearchServer & search_server) {
-    std::map< std::set<std::string>, std::vector<int> > index;
+    std::map< std::set<std::string_view>, std::vector<int> > index;
     for (auto doc_id : search_server) {
-        std::set<std::string> set_of_strings;
+        std::set<std::string_view> set_of_strings;
         for (auto & [word, _] : search_server.GetWordFrequencies(doc_id)) {
             set_of_strings.insert(word);
         }

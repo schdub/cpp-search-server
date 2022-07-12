@@ -15,6 +15,6 @@ std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer& strings) 
     return non_empty_strings;
 }
 
-std::vector<std::string> SplitIntoWords(const std::string& text);
+std::vector<std::string_view> SplitIntoWords(std::string_view text);
 
-bool HasSpecialSymbols(const std::string & text);
+bool HasSpecialSymbols(std::string_view text);

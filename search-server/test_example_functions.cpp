@@ -672,12 +672,12 @@ void PrintDocument(const Document& document) {
          << "rating = "s << document.rating << " }"s << endl;
 }
 
-void PrintMatchDocumentResult(int document_id, const vector<string>& words, DocumentStatus status) {
+void PrintMatchDocumentResult(int document_id, const vector<string_view>& words, DocumentStatus status) {
     cout << "{ "s
          << "document_id = "s << document_id << ", "s
          << "status = "s << static_cast<int>(status) << ", "s
          << "words ="s;
-    for (const string& word : words) {
+    for (auto word : words) {
         cout << ' ' << word;
     }
     cout << "}"s << endl;
@@ -714,6 +714,54 @@ void MatchDocuments(const SearchServer& search_server, const string& query) {
         }
     } catch (const exception& e) {
         cout << "Ошибка матчинга документов на запрос "s << query << ": "s << e.what() << endl;
+    }
+}
+
+void TestUsageOfStringView() {
+    SearchServer search_server("и в на"s);
+
+    string s;
+    {
+        s = "пушистый кот пушистый хвост";
+        AddDocument(search_server, 1, s, DocumentStatus::ACTUAL, {7, 2, 7});
+        s.clear();
+        s = "пушистый пёс и модный ошейник"s;
+        AddDocument(search_server, 1, s, DocumentStatus::ACTUAL, {1, 2});
+        s.clear();
+        s = "пушистый пёс и модный ошейник"s;
+        AddDocument(search_server, -1, s, DocumentStatus::ACTUAL, {1, 2});
+        s.clear();
+        s = "большой пёс скво\x12рец евгений"s;
+        AddDocument(search_server, 3, s, DocumentStatus::ACTUAL, {1, 3, 2});
+        s.clear();
+        s = "большой пёс скворец евгений"s;
+        AddDocument(search_server, 4, s, DocumentStatus::ACTUAL, {1, 1, 1});
+        s.clear();
+    }
+    {
+        s = "пушистый -пёс"s;
+        FindTopDocuments(search_server, s); 
+        s.clear();
+        s = "пушистый --кот"s;
+        FindTopDocuments(search_server, s);
+        s.clear();
+        s = "пушистый -"s;
+        FindTopDocuments(search_server, s);
+        s.clear();
+    }
+    {
+        s = "пушистый пёс"s;
+        MatchDocuments(search_server, s);
+        s.clear();
+        s = "модный -кот"s;
+        MatchDocuments(search_server, s);
+        s.clear();
+        s = "модный --пёс"s;
+        MatchDocuments(search_server, s);
+        s.clear();
+        s = "пушистый - хвост"s;
+        MatchDocuments(search_server, s);
+        s.clear();
     }
 }
 
@@ -835,4 +883,8 @@ void AllTests() {
     cout << "//////////////////////////////////////////////////////////////" << endl;
 
     TestRemoveDocuments();
+
+    cout << "//////////////////////////////////////////////////////////////" << endl;
+
+    TestUsageOfStringView();
 }

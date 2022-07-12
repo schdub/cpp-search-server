@@ -3,27 +3,25 @@
 
 using namespace std;
 
-vector<string> SplitIntoWords(const string& text) {
-    vector<string> words;
-    string word;
-    for (const char c : text) {
-        if (c == ' ') {
-            if (!word.empty()) {
-                words.push_back(word);
-                word.clear();
+vector<string_view> SplitIntoWords(string_view text) {
+    vector<string_view> words;
+    size_t e, b;
+    b = text.find_first_not_of(' ');
+    while (b != string::npos) {
+        e = text.find_first_of(' ', b+1);
+        if (e == string::npos) {
+            if (text.size() - b) {
+                words.push_back( text.substr(b, text.size()-b) );
             }
-        } else {
-            word += c;
+            break;
         }
+        words.push_back( text.substr(b, e-b) );
+        b = text.find_first_not_of(' ', e+1);
     }
-    if (!word.empty()) {
-        words.push_back(word);
-    }
-
     return words;
 }
 
-bool HasSpecialSymbols(const string & text) {
+bool HasSpecialSymbols(string_view text) {
     bool result = std::any_of(text.begin(), text.end(), [](char ch) {
         return (ch >= 0 && ch <= 31);
     });
