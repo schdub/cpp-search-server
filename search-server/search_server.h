@@ -15,7 +15,7 @@
 #include <future>
 #include <list>
 
-#include "concurent_map.h"
+#include "concurrent_map.h"
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 const double RELEVANCE_CMP_EPSILON = 1.0e-6;
