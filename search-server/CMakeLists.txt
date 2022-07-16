@@ -7,6 +7,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(TBB REQUIRED)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads)
+target_link_libraries(Threads::Threads)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
 include_directories(${PROJECT_SOURCE_DIR})
 
 add_executable(ss8
