@@ -64,10 +64,7 @@ const map<string_view, double>& SearchServer::GetWordFrequencies(int document_id
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query, DocumentStatus status) const {
-    auto pred = [status](int, DocumentStatus predicate_status, int) {
-        return predicate_status == status;
-    };
-    return FindTopDocuments(raw_query, pred);
+    return FindTopDocuments(execution::seq, raw_query, status);
 }
 
 int SearchServer::GetDocumentCount() const {
