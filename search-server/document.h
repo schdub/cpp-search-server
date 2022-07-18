@@ -18,4 +18,17 @@ struct Document {
     int rating = 0;
 };
 
+const double RELEVANCE_CMP_EPSILON = 1.0e-6;
+
+struct CompareByRelevance {
+    bool operator()(const Document& lhs, const Document& rhs) {
+        if (std::abs(lhs.relevance - rhs.relevance) < RELEVANCE_CMP_EPSILON *
+            std::max(std::abs(lhs.relevance), std::abs(rhs.relevance))) {
+            return lhs.rating > rhs.rating;
+        } else {
+            return lhs.relevance > rhs.relevance;
+        }
+    }
+};
+
 std::ostream& operator<<(std::ostream& out, const Document& document);

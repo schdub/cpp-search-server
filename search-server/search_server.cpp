@@ -30,9 +30,10 @@ void SearchServer::AddDocument(int document_id, string_view document, DocumentSt
     const double inv_word_count = 1.0 / words.size();
     auto & map_of_words_freq = document_to_word_freqs_[document_id];
     for (auto word : words) {
-        auto it = word_to_document_freqs_.find(word);
+        std::string word_str = string{word};
+        auto it = word_to_document_freqs_.find(word_str);
         if (it == word_to_document_freqs_.end()) {
-            auto it_out = word_to_document_freqs_.insert({string{word}, {}});
+            auto it_out = word_to_document_freqs_.insert({word_str, {}});
             if (it_out.second == false) {
                 continue;
             } else {
@@ -64,7 +65,7 @@ const map<string_view, double>& SearchServer::GetWordFrequencies(int document_id
 }
 
 std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query, DocumentStatus status) const {
-    return FindTopDocuments(execution::seq, raw_query, status);
+    return FindTopDocuments(std::execution::seq, raw_query, status);
 }
 
 int SearchServer::GetDocumentCount() const {
@@ -146,12 +147,13 @@ SearchServer::Query SearchServer::ParseQuery(string_view text) const {
 }
 
 SearchServer::Query SearchServer::ParseQueryWithCache(string_view text) const {
-    auto it_to_query_cache = query_cache_.find(string{text});
+    string text_str{text};
+    auto it_to_query_cache = query_cache_.find(text_str);
     if (it_to_query_cache != query_cache_.end()) {
         return it_to_query_cache->second;
     }
     Query query = ParseQuery(text);
-    query_cache_[string{text}] = query;
+    query_cache_[text_str] = query;
     return query;
 }
 
