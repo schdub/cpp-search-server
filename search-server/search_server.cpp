@@ -136,15 +136,17 @@ SearchServer::Query SearchServer::ParseQuery(string_view text, bool need_sort) c
         const QueryWord query_word = ParseQueryWord(word);
         if (!query_word.is_stop) {
             auto & ref_vector = query_word.is_minus ? query.minus_words : query.plus_words;
-            auto it = std::find(ref_vector.begin(), ref_vector.end(), query_word.data);
-            if (it == ref_vector.end()) {
-                ref_vector.push_back(query_word.data);
-            }
+            ref_vector.push_back(query_word.data);
         }
     }
     if (need_sort) {
-        std::sort(query.plus_words.begin(), query.plus_words.end());
-        std::sort(query.minus_words.begin(), query.minus_words.end());
+        auto uniqicator = [](std::vector<std::string> & ref_vector) {
+            std::sort(ref_vector.begin(), ref_vector.end());
+            ref_vector.resize(std::distance(ref_vector.begin(),
+                std::unique(ref_vector.begin(), ref_vector.end())));
+        };
+        uniqicator(query.plus_words);
+        uniqicator(query.minus_words);
     }
     return query;
 }

@@ -95,7 +95,7 @@ private:
 
     QueryWord ParseQueryWord(std::string_view text) const;
 
-    Query ParseQuery(std::string_view text, bool need_sort = false) const;
+    Query ParseQuery(std::string_view text, bool need_sort = true) const;
 
     // Existence required
     double ComputeWordInverseDocumentFreq(const std::string& word) const;

@@ -13,7 +13,7 @@ std::vector<std::vector<Document>> ProcessQueries(
         queries.begin(), queries.end(),
         out.begin(),
         [&search_server](const std::string & raw_query) {
-            return search_server.FindTopDocuments(std::execution::par, raw_query);
+            return search_server.FindTopDocuments(raw_query);
         }
     );
 
