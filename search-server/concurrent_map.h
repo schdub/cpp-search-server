@@ -19,11 +19,11 @@ void AsyncsWait(Container & futures) {
 template<typename Container, typename Function>
 void AsyncsRun(const Container & container, Function function, Futures & futures, size_t max_threads) {
     if (container.size() == 0) return;
-    using Iterator = typename Container::iterator;
+    using Iterator = typename Container::const_iterator;
     max_threads = std::min(max_threads, container.size());
     size_t chunk_size = container.size() / max_threads;
-    Iterator ita, itb;
-    itb = container.begin();
+    Iterator ita;
+    Iterator itb = container.begin();
     for (size_t i = 0; i < max_threads-1; ++i) {
         ita = itb; itb = std::next(itb, chunk_size);
         futures.emplace_back( std::async([ita, itb, function]() {

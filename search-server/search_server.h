@@ -35,10 +35,10 @@ public:
 
     void AddDocument(int document_id, std::string_view document, DocumentStatus status, const std::vector<int>& ratings);
 
-    void RemoveDocument(int document_id);
-
     template <typename ExecutionPolicy>
     void RemoveDocument(ExecutionPolicy && policy, int document_id);
+
+    void RemoveDocument(int document_id);
 
     const std::map<std::string_view, double>&
     GetWordFrequencies(int document_id) const;
@@ -71,8 +71,8 @@ private:
     };
 
     struct Query {
-        std::set<std::string, std::less<>> plus_words;
-        std::set<std::string, std::less<>> minus_words;
+        std::vector<std::string> plus_words;
+        std::vector<std::string> minus_words;
     };
 
     std::set<std::string, std::less<>> stop_words_;
@@ -80,7 +80,6 @@ private:
     std::map<int, std::map<std::string_view, double>> document_to_word_freqs_;
     std::map<int, DocumentData> documents_;
     std::set<int> documents_indexes_;
-    mutable std::map<std::string, Query> query_cache_;
 
     bool IsStopWord(std::string_view word) const;
 
@@ -96,9 +95,7 @@ private:
 
     QueryWord ParseQueryWord(std::string_view text) const;
 
-    Query ParseQuery(std::string_view text) const;
-
-    Query ParseQueryWithCache(std::string_view text) const;
+    Query ParseQuery(std::string_view text, bool need_sort = false) const;
 
     // Existence required
     double ComputeWordInverseDocumentFreq(const std::string& word) const;
@@ -147,9 +144,7 @@ std::vector<Document> SearchServer::FindTopDocuments(std::string_view raw_query,
 
 template <typename ExecutionPolicy, typename Predicate>
 std::vector<Document> SearchServer::FindTopDocuments(ExecutionPolicy&& policy, std::string_view raw_query, Predicate predicate) const {
-    constexpr bool is_par_exec = std::is_same_v<std::decay_t<ExecutionPolicy>, std::execution::parallel_policy>;
-    const Query query = (is_par_exec ? ParseQueryWithCache(raw_query) :
-                                       ParseQuery(raw_query));
+    const Query query = ParseQuery(raw_query);
     auto matched_documents = FindAllDocuments(policy, query, predicate);
     std::sort(policy, matched_documents.begin(), matched_documents.end(), CompareByRelevance());
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
@@ -288,12 +283,7 @@ MatchedWords SearchServer::MatchDocument(ExecutionPolicy && policy, std::string_
         throw std::out_of_range("MatchDocument: document_id "
             + std::to_string(document_id) + " not found.");
     }
-    Query query;
-    if (typeid(policy) == typeid(std::execution::parallel_policy)) {
-        query = ParseQueryWithCache(raw_query);
-    } else {
-        query = ParseQuery(raw_query);
-    }
+    const Query query = ParseQuery(raw_query);
     for (const std::string & minus_word : query.minus_words) {
         auto it_to_set = word_to_document_freqs_.find(minus_word);
         if (it_to_set == word_to_document_freqs_.end() || 

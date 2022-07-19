@@ -130,29 +130,22 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(string_view text) const {
     return result;
 }
 
-SearchServer::Query SearchServer::ParseQuery(string_view text) const {
+SearchServer::Query SearchServer::ParseQuery(string_view text, bool need_sort) const {
     Query query;
     for (auto word : SplitIntoWords(text)) {
         const QueryWord query_word = ParseQueryWord(word);
         if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                query.minus_words.insert(query_word.data);
-            } else {
-                query.plus_words.insert(query_word.data);
+            auto & ref_vector = query_word.is_minus ? query.minus_words : query.plus_words;
+            auto it = std::find(ref_vector.begin(), ref_vector.end(), query_word.data);
+            if (it == ref_vector.end()) {
+                ref_vector.push_back(query_word.data);
             }
         }
     }
-    return query;
-}
-
-SearchServer::Query SearchServer::ParseQueryWithCache(string_view text) const {
-    string text_str{text};
-    auto it_to_query_cache = query_cache_.find(text_str);
-    if (it_to_query_cache != query_cache_.end()) {
-        return it_to_query_cache->second;
+    if (need_sort) {
+        std::sort(query.plus_words.begin(), query.plus_words.end());
+        std::sort(query.minus_words.begin(), query.minus_words.end());
     }
-    Query query = ParseQuery(text);
-    query_cache_[text_str] = query;
     return query;
 }
 
