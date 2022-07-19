@@ -20,6 +20,8 @@
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
+using MatchedWords = std::tuple<std::vector<std::string_view>, DocumentStatus>;
+
 class SearchServer {
 public:
     SearchServer() = default;
@@ -28,6 +30,7 @@ public:
 
     template<class StringContainer>
     SearchServer(const StringContainer & container);
+
     void SetStopWords(const std::string& text);
 
     void AddDocument(int document_id, std::string_view document, DocumentStatus status, const std::vector<int>& ratings);
@@ -40,8 +43,6 @@ public:
     const std::map<std::string_view, double>&
     GetWordFrequencies(int document_id) const;
 
-    std::vector<Document> FindTopDocuments(std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const;
-
     template <typename ExecutionPolicy>
     std::vector<Document> FindTopDocuments(ExecutionPolicy&& policy, std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const;
 
@@ -51,14 +52,14 @@ public:
     template <typename ExecutionPolicy, typename Predicate>
     std::vector<Document> FindTopDocuments(ExecutionPolicy&& policy, std::string_view raw_query, Predicate predicate) const;
 
+    std::vector<Document> FindTopDocuments(std::string_view raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const;
+
     int GetDocumentCount() const;
 
-    std::tuple<std::vector<std::string_view>, DocumentStatus>
-    MatchDocument(std::string_view raw_query, int document_id) const;
-
     template <typename ExecutionPolicy>
-    std::tuple<std::vector<std::string_view>, DocumentStatus>
-    MatchDocument(ExecutionPolicy && policy, std::string_view raw_query, int document_id) const;
+    MatchedWords MatchDocument(ExecutionPolicy && policy, std::string_view raw_query, int document_id) const;
+
+    MatchedWords MatchDocument(std::string_view raw_query, int document_id) const;
 
     std::set<int>::const_iterator begin() const;
     std::set<int>::const_iterator end() const;
@@ -115,6 +116,13 @@ private:
     std::vector<Document> FindAllDocuments(std::execution::sequenced_policy,
                                            const Query& query,
                                            Predicate predicate) const;
+
+    bool HasSpecialSymbols(std::string_view text) const {
+        bool result = std::any_of(text.begin(), text.end(), [](const char ch) {
+            return (ch >= 0 && ch <= 31);
+        });
+        return result;
+    }
 };
 
 template<class StringContainer>
@@ -126,10 +134,10 @@ SearchServer::SearchServer(const StringContainer & container) {
 
 template <typename ExecutionPolicy>
 std::vector<Document> SearchServer::FindTopDocuments(ExecutionPolicy&& policy, std::string_view raw_query, DocumentStatus status) const {
-    auto pred = [status](int, DocumentStatus predicate_status, int) {
+    auto predicate = [status](int, DocumentStatus predicate_status, int) {
         return predicate_status == status;
     };
-    return FindTopDocuments(policy, raw_query, pred);
+    return FindTopDocuments(policy, raw_query, predicate);
 }
 
 template <typename Predicate>
@@ -274,8 +282,7 @@ void SearchServer::RemoveDocument(ExecutionPolicy && policy, int document_id) {
 }
 
 template <typename ExecutionPolicy>
-std::tuple<std::vector<std::string_view>, DocumentStatus>
-SearchServer::MatchDocument(ExecutionPolicy && policy, std::string_view raw_query, int document_id) const {
+MatchedWords SearchServer::MatchDocument(ExecutionPolicy && policy, std::string_view raw_query, int document_id) const {
     auto it_to_documents_data = documents_.find(document_id);
     if (it_to_documents_data == documents_.end()) {
         throw std::out_of_range("MatchDocument: document_id "

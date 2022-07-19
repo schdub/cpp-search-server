@@ -72,8 +72,7 @@ int SearchServer::GetDocumentCount() const {
     return documents_.size();
 }
 
-tuple<vector<string_view>, DocumentStatus>
-SearchServer::MatchDocument(string_view raw_query, int document_id) const {
+MatchedWords SearchServer::MatchDocument(string_view raw_query, int document_id) const {
     return MatchDocument(std::execution::seq, raw_query, document_id);
 }
 
